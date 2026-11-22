@@ -12,8 +12,10 @@ Woodly is a cross-platform desktop app (Tauri 2 + React + TypeScript) that turns
 git clone https://github.com/noah-jones-dev/Woodly.git
 cd Woodly
 .\woodly.cmd setup -InstallMissing   # checks/installs Git, Node.js, Rust, C++ build tools, WebView2 + npm packages
-.\woodly.cmd start                   # get latest code + install updates, then launch the desktop app
+.\woodly.cmd install                 # get latest code, build the app, add a Woodly icon to Desktop + Start menu
 ```
+
+After that, just double-click the **Woodly** icon. To update, close Woodly and run `.\woodly.cmd install` again; your projects are kept.
 
 | Command | What it does |
 |---|---|
@@ -25,6 +27,8 @@ cd Woodly
 | `build` | Release installer in `src-tauri\target\release\bundle`. |
 | `test` | Type check, TypeScript tests and Rust tests. |
 | `status` | Branch, commits waiting to be pulled, tool versions. |
+| `install [-NoUpdate]` | Updates, builds the release app and creates **Desktop and Start menu icons**. Re-run to update. |
+| `uninstall` | Removes the icons (projects and settings are kept). |
 | `clean [-Force]` | Deletes `node_modules`, `dist` and Rust build output. |
 
 `woodly.cmd` runs `woodly.ps1` with `-ExecutionPolicy Bypass` for that one process, so it works even when Windows blocks unsigned scripts. If your policy allows local scripts you can call `.\woodly.ps1 <command>` directly.

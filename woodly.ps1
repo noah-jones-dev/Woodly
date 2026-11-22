@@ -24,20 +24,28 @@
         test      Run the TypeScript and Rust tests.
         status    Show branch, pending updates and tool versions.
         clean     Delete node_modules, dist and Rust build output (asks first).
+        install   Get the latest code, build the app, and add a Woodly icon to your Desktop and
+                  Start menu (Windows). Run it again any time to update the installed app.
+        uninstall Remove the Desktop and Start menu icons (your projects are kept).
 
 .EXAMPLE
     .\woodly.ps1 setup -InstallMissing
 .EXAMPLE
     .\woodly.ps1 start
+.EXAMPLE
+    .\woodly.ps1 install
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'update', 'run', 'start', 'web', 'build', 'test', 'status', 'clean')]
+    [ValidateSet('help', 'setup', 'update', 'run', 'start', 'web', 'build', 'test', 'status', 'clean', 'install', 'uninstall')]
     [string]$Command = 'help',
 
     # setup: install missing prerequisites with winget (Windows only).
     [switch]$InstallMissing,
+
+    # install: build from the code you have, without pulling the latest first.
+    [switch]$NoUpdate,
 
     # update: also pull when you have uncommitted changes (git refuses if they would be overwritten).
     # clean: don't ask for confirmation.
@@ -336,12 +344,79 @@ function Invoke-Clean {
     if (-not $targets) { Write-Ok 'Nothing to clean.'; return }
     Write-Title 'This will delete:'
     $targets | ForEach-Object { Write-Info $_ }
+    if ($OnWindows -and (Get-ShortcutPaths | Where-Object { Test-Path $_ })) {
+        Write-Warn 'This also deletes the installed app, so the Woodly icon will stop working until you run install again.'
+    }
     if (-not $Force) {
         $answer = Read-Host 'Continue? (y/N)'
         if ($answer -notmatch '^(y|yes)$') { Write-Info 'Cancelled.'; return }
     }
     foreach ($t in $targets) { Remove-Item -Recurse -Force $t }
     Write-Ok 'Cleaned. Run ".\woodly.ps1 setup" to reinstall packages.'
+}
+
+# ---------------------------------------------------------------- install (icon)
+
+$ShortcutName = 'Woodly.lnk'
+function Get-ShortcutPaths {
+    return @(
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) $ShortcutName),
+        (Join-Path ([Environment]::GetFolderPath('Programs')) $ShortcutName)
+    )
+}
+
+# The release build (not dev mode): one self-contained .exe with the UI built in.
+function Find-ReleaseExe {
+    foreach ($name in @('woodly.exe', 'Woodly.exe')) {
+        $p = Join-Path $RepoRoot "src-tauri\target\release\$name"
+        if (Test-Path $p) { return $p }
+    }
+    return $null
+}
+
+function Invoke-Install {
+    if (-not $OnWindows) { throw 'install creates Windows shortcuts. On macOS/Linux use ".\woodly.ps1 build" and open the installer it creates.' }
+
+    # Windows locks a running .exe, so the rebuild would fail.
+    if (Get-Process -Name 'woodly' -ErrorAction SilentlyContinue) {
+        throw 'Woodly is running. Close it first, then run install again.'
+    }
+
+    if (-not $NoUpdate) { Invoke-Update }
+    Confirm-Dependencies
+    Assert-DesktopTools
+
+    Write-Title 'Building the Woodly app (release)'
+    Write-Info 'The first build can take 5-10 minutes; later builds are much faster.'
+    # --no-bundle: just the app .exe, no installer package needed for a local install.
+    Invoke-Native $Npm @('run', 'tauri', '--', 'build', '--no-bundle')
+
+    $exe = Find-ReleaseExe
+    if (-not $exe) { throw 'The build finished but woodly.exe was not found in src-tauri\target\release.' }
+
+    Write-Title 'Adding Woodly icons'
+    $icon = Join-Path $RepoRoot 'src-tauri\icons\icon.ico'
+    $shell = New-Object -ComObject WScript.Shell
+    foreach ($path in Get-ShortcutPaths) {
+        $lnk = $shell.CreateShortcut($path)
+        $lnk.TargetPath = $exe
+        $lnk.WorkingDirectory = Split-Path $exe
+        $lnk.IconLocation = "$icon,0"
+        $lnk.Description = 'Woodly - Imagine it. Design it. Build it.'
+        $lnk.Save()
+        Write-Ok $path
+    }
+    Write-Host ''
+    Write-Ok 'Done. Double-click the Woodly icon on your Desktop, or find Woodly in the Start menu.'
+    Write-Info 'To update later: close Woodly and run  .\woodly.cmd install  again. Your projects are kept.'
+}
+
+function Invoke-Uninstall {
+    if (-not $OnWindows) { throw 'uninstall only removes Windows shortcuts.' }
+    foreach ($path in Get-ShortcutPaths) {
+        if (Test-Path $path) { Remove-Item -Force $path; Write-Ok "Removed $path" }
+    }
+    Write-Info 'Icons removed. Your projects and settings were not touched.'
 }
 
 # ---------------------------------------------------------------- main
@@ -359,6 +434,8 @@ try {
         'test' { Invoke-Test }
         'status' { Invoke-Status }
         'clean' { Invoke-Clean }
+        'install' { Invoke-Install }
+        'uninstall' { Invoke-Uninstall }
     }
 } catch {
     Write-Host ""
