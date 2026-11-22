@@ -29,7 +29,7 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-6xl p-8">
       <div className="card relative overflow-hidden p-8">
-        <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-wood-300/30" />
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-wood-300/30" aria-hidden />
         <h1 className="text-3xl font-semibold tracking-tight">Welcome to your workshop.</h1>
         <p className="mt-1 text-charcoal-700/80">You don't need to know how to build something to start building it. You just need an idea.</p>
         <div className="mt-6 flex gap-3">

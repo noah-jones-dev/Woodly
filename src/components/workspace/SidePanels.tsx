@@ -18,7 +18,9 @@ export function ParametersPanel({ spec, onChange }: { spec: ProjectSpec; onChang
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ tone: "tip" | "danger"; text: string }>();
   const timer = useRef<number>();
-  useEffect(() => setDraft(spec), [spec]);
+  useEffect(() => {
+    setDraft(spec);
+  }, [spec]);
 
   // Sliders update the drawings instantly; the version is saved after a pause.
   const setParam = (key: string, value: number) => {
@@ -141,7 +143,11 @@ export function AssistantPanel({ project, analysis, onChat }: { project: Project
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: "nearest" }), [project.chat.length]);
+  // Braces matter: scrollIntoView can return a Promise in newer browsers, and
+  // anything an effect returns is treated as its cleanup function.
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" });
+  }, [project.chat.length]);
 
   if (!isTaskConfigured(settings, "text"))
     return <div className="text-sm text-charcoal-700/80">Connect an AI provider in Settings to ask questions about this project, like “Why pocket holes here?” or “I cut A1 two inches short — what now?”</div>;

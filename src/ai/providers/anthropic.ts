@@ -43,14 +43,18 @@ export const anthropicProvider: AIProvider = {
     }));
     const useFallback = FALLBACK_MODELS.test(req.model);
     try {
-      const res = await client().beta.messages.create({
-        model: req.model,
-        max_tokens: req.maxTokens ?? 16000,
-        system: req.system,
-        messages,
-        ...(EFFORT_MODELS.test(req.model) && req.effort ? { output_config: { effort: req.effort } } : {}),
-        ...(useFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-      });
+      // Stream, then collect the final message: the SDK refuses large
+      // non-streaming requests (they can outlive HTTP timeouts).
+      const res = await client()
+        .beta.messages.stream({
+          model: req.model,
+          max_tokens: req.maxTokens ?? 16000,
+          system: req.system,
+          messages,
+          ...(EFFORT_MODELS.test(req.model) && req.effort ? { output_config: { effort: req.effort } } : {}),
+          ...(useFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+        })
+        .finalMessage();
       if (res.stop_reason === "refusal")
         throw new AIError(`The model declined this request${res.stop_details?.explanation ? `: ${res.stop_details.explanation}` : "."}`, "refusal");
       if (res.stop_reason === "max_tokens") throw new AIError("The response was cut off (too long). Try a simpler request.", "format");

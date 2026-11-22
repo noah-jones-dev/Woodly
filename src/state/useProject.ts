@@ -41,9 +41,11 @@ export function useProject(id: string | undefined) {
     if (!cur) return;
     const version = cur.version + 1;
     const next: ProjectRecord = { ...cur, spec, name: spec.name, version, updatedAt: new Date().toISOString() };
-    setProject(next);
-    await repo.saveProject(next);
+    ref.current = next; // later edits build on this one immediately
+    // Record history first: screens re-read it as soon as `version` changes.
     await repo.addVersion({ projectId: cur.id, version, note, spec, createdAt: next.updatedAt });
+    await repo.saveProject(next);
+    setProject(next);
   }, []);
 
   return { project, analysis, patch, saveSpec };
