@@ -15,7 +15,7 @@ import { formatLength } from "@/engine/format";
 import { matchTemplate } from "@/templates";
 import type { Profile, Settings } from "@/data/types";
 import { runTask } from "./index";
-import { assistantSystemPrompt, clarifySystemPrompt, profileText, specSystemPrompt } from "./prompts";
+import { assistantSystemPrompt, clarifySystemPrompt, photoBriefSystemPrompt, profileText, specSystemPrompt } from "./prompts";
 import { AIError, type ChatMessage, type ImageInput } from "./types";
 
 export type ClarifyQuestion = { id: string; question: string; options: string[] };
@@ -33,17 +33,47 @@ export function extractJSON(text: string): unknown {
   }
 }
 
-export async function clarify(settings: Settings, idea: string): Promise<ClarifyResult> {
+/**
+ * Photo → text design brief, on the user's "vision" route. Returns plain text
+ * that the clarify and spec steps then treat like part of the idea.
+ */
+export async function describePhotos(settings: Settings, images: ImageInput[], idea = ""): Promise<string> {
+  if (!images.length) return "";
+  const { text } = await runTask(settings, "vision", {
+    system: photoBriefSystemPrompt(),
+    messages: [
+      {
+        role: "user",
+        text: `${idea.trim() ? `The user's description: ${idea.trim()}` : "The user didn't write a description — work from the photos."}\n\nDescribe what to build.`,
+        images,
+      },
+    ],
+    maxTokens: 2000,
+    effort: "medium",
+  });
+  return text.trim();
+}
+
+/** The idea as the model sees it: typed description plus any photo brief. */
+export function ideaText(idea: string, photoBrief?: string): string {
+  const typed = idea.trim();
+  const brief = photoBrief?.trim();
+  if (!brief) return typed;
+  return `${typed || "Build what's shown in the user's photo(s)."}\n\nFrom the user's photo(s): ${brief}`;
+}
+
+export async function clarify(settings: Settings, idea: string, photoBrief?: string): Promise<ClarifyResult> {
+  const full = ideaText(idea, photoBrief);
   const { text } = await runTask(settings, "text", {
     system: clarifySystemPrompt(),
-    messages: [{ role: "user", text: `${profileText(settings.profile)}\n\nIdea: ${idea}` }],
+    messages: [{ role: "user", text: `${profileText(settings.profile)}\n\nIdea: ${full}` }],
     json: true,
     maxTokens: 4000,
     effort: "low",
   });
   const raw = extractJSON(text) as Partial<ClarifyResult>;
   return {
-    summary: String(raw.summary ?? idea),
+    summary: String(raw.summary ?? full),
     questions: (raw.questions ?? []).slice(0, 4).map((q, i) => ({ id: String(q.id ?? `q${i}`), question: String(q.question), options: (q.options ?? []).map(String) })),
     safetyNote: raw.safetyNote ? String(raw.safetyNote) : undefined,
   };
@@ -88,7 +118,9 @@ export async function generateProject(
   idea: string,
   answers: { question: string; answer: string }[],
   onProgress?: (m: string) => void,
+  photoBrief?: string,
 ): Promise<GenerateResult> {
+  idea = ideaText(idea, photoBrief);
   const qa = answers.filter((a) => a.answer.trim()).map((a) => `Q: ${a.question}\nA: ${a.answer}`).join("\n");
   return specLoop(
     settings,

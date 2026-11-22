@@ -16,7 +16,7 @@ import { StepDiagram } from "@/blueprint/StepDiagram";
 import { TOOL_LIBRARY, substituteTools, toolName } from "@/content/tools";
 import { LESSON_BY_KEY } from "@/content/lessons";
 import { Callout, DIFFICULTY_LABEL, DifficultyChip } from "@/components/ui";
-import { fileToImage } from "./SidePanels";
+import { fileToImage } from "@/lib/images";
 import { uid } from "@/lib/platform";
 
 type TabProps = { project: ProjectRecord; analysis: Analysis };

@@ -7,7 +7,7 @@ export const TASK_LABELS: Record<AITask, { label: string; description: string }>
   text: { label: "Text & explanations", description: "Clarifying questions, the project assistant, lesson help." },
   reasoning: { label: "Reasoning & design review", description: "Revising designs and fixing validation problems." },
   blueprint: { label: "Blueprint generation", description: "Writing the structured project specification." },
-  vision: { label: "Vision", description: "Analyzing photos you upload of your work." },
+  vision: { label: "Vision", description: "Reading photos — things you want to build and progress shots of your work." },
 };
 
 export type ImageInput = { mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif"; base64: string };

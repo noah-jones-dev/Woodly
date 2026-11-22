@@ -7,7 +7,7 @@ import { repo } from "@/data/repo";
 import type { ProjectRecord } from "@/data/types";
 import { analyze } from "@/engine";
 import { Callout, PageHeader, Spinner } from "@/components/ui";
-import { fileToImage } from "@/components/workspace/SidePanels";
+import { fileToImage } from "@/lib/images";
 
 /** General woodworking Q&A, optionally grounded in one of your projects. */
 export default function Assistant() {

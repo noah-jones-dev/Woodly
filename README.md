@@ -66,7 +66,7 @@ Local-first. The desktop app uses SQLite (`tauri-plugin-sql`, migrations in `src
 
 ## App structure
 - **Home** — prompt box, continue building, beginner projects, learning progress.
-- **Create** — idea → clarifying questions → generation (with live repair progress) or template.
+- **Create** — describe an idea and/or attach up to 4 photos (a piece you like, a sketch, the space it goes in) → clarifying questions → generation (with live repair progress) or template. Photos are read by the **Vision** route into an editable written brief, which the blueprint model designs from — so the spec model never needs image support, and you can correct what the AI saw (e.g. estimated sizes) before generating. Large photos are downscaled in the browser before upload.
 - **Project workspace** — left: navigation + steps; center: Overview, Blueprints (front/side/top, isometric, exploded, part diagrams), 3D Model (rotate, explode, hide parts), Cut List (+ cutting layouts), Materials (checklist, CSV export, material swap), Tools (owned/missing, substitutions), Instructions, Notes (+ photos); right: Design (parameter sliders and revisions), Checks, project-aware Assistant (with photo upload).
 - **Build Mode** — full-screen, one step at a time, arrow keys.
 - **Manual / PDF** — printable manual; *Print → Save as PDF*.

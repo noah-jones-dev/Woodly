@@ -5,6 +5,7 @@ import type { ProjectSpec } from "@/engine/spec";
 import type { ProjectRecord } from "@/data/types";
 import { useApp } from "@/state/store";
 import { aiAvailable, isTaskConfigured, type ImageInput } from "@/ai";
+import { fileToImage } from "@/lib/images";
 import { askAssistant, projectContext, reviseProject } from "@/ai/generate";
 import { useFormat } from "@/lib/useFormat";
 import { Callout, Spinner } from "@/components/ui";
@@ -123,18 +124,6 @@ export function ValidationPanel({ analysis }: { analysis: Analysis }) {
   );
 }
 
-async function fileToImage(f: File): Promise<ImageInput & { dataUrl: string }> {
-  const dataUrl = await new Promise<string>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result));
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
-  const [head, base64] = dataUrl.split(",");
-  const mediaType = (/data:(.*?);/.exec(head)?.[1] ?? "image/jpeg") as ImageInput["mediaType"];
-  return { mediaType, base64, dataUrl };
-}
-
 /** Project-aware chat. Answers use this project's parts, steps and cut list. */
 export function AssistantPanel({ project, analysis, onChat }: { project: ProjectRecord; analysis: Analysis; onChat: (chat: ProjectRecord["chat"]) => void }) {
   const settings = useApp((s) => s.settings);
@@ -212,4 +201,3 @@ export function AssistantPanel({ project, analysis, onChat }: { project: Project
   );
 }
 
-export { fileToImage };

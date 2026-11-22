@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { PROVIDERS } from "@/ai";
-import { extractJSON, generateProject, offlineGenerate } from "@/ai/generate";
+import { describePhotos, extractJSON, generateProject, ideaText, offlineGenerate } from "@/ai/generate";
+import { fitWithin } from "@/lib/images";
 import { specSystemPrompt } from "@/ai/prompts";
 import { DEFAULT_SETTINGS, type Settings } from "@/data/types";
 import { TEMPLATES } from "@/templates";
@@ -62,5 +63,55 @@ describe("AI generation pipeline", () => {
     expect(p).toContain("pine-1x12");
     expect(p).toContain("pocket-holes");
     expect(p).toContain('"schemaVersion":1');
+  });
+});
+
+describe("designing from a photo", () => {
+  const photo = { mediaType: "image/jpeg" as const, base64: "AAAA" };
+
+  it("sends photos to the vision route and returns a text brief", async () => {
+    const calls: CompletionRequest[] = [];
+    PROVIDERS.anthropic.complete = async (req) => {
+      calls.push(req);
+      return "  A three-shelf pine bookcase, about 30 x 11 x 48 in.  ";
+    };
+    const vision = { ...settings, ai: { ...settings.ai, routes: { ...settings.ai.routes, vision: { provider: "anthropic" as const, model: "claude-sonnet-5-5" } } } };
+    const brief = await describePhotos(vision, [photo], "but painted white");
+    expect(brief).toBe("A three-shelf pine bookcase, about 30 x 11 x 48 in.");
+    expect(calls[0].model).toBe("claude-sonnet-5-5");
+    expect(calls[0].messages[0].images).toEqual([photo]);
+    expect(calls[0].messages[0].text).toMatch(/painted white/);
+  });
+
+  it("skips the vision call when there are no photos", async () => {
+    PROVIDERS.anthropic.complete = async () => {
+      throw new Error("should not be called");
+    };
+    expect(await describePhotos(settings, [])).toBe("");
+  });
+
+  it("feeds the photo brief into spec generation as text", async () => {
+    const good = TEMPLATES.find((t) => t.key === "bookshelf")!.spec;
+    const calls: CompletionRequest[] = [];
+    PROVIDERS.anthropic.complete = async (req) => {
+      calls.push(req);
+      return JSON.stringify(good);
+    };
+    await generateProject(settings, "", [], undefined, "A three-shelf pine bookcase");
+    const msg = calls[0].messages[0];
+    expect(msg.text).toMatch(/From the user's photo\(s\): A three-shelf pine bookcase/);
+    expect(msg.images).toBeUndefined(); // the blueprint model only ever sees text
+  });
+
+  it("combines typed and photo descriptions", () => {
+    expect(ideaText("a desk")).toBe("a desk");
+    expect(ideaText("", "a bench")).toMatch(/^Build what's shown.*a bench$/s);
+    expect(ideaText("wider", "a bench")).toMatch(/^wider\n\nFrom the user's photo\(s\): a bench$/);
+  });
+
+  it("scales large photos to fit the long edge, keeping aspect ratio", () => {
+    expect(fitWithin(4032, 3024)).toEqual({ w: 1568, h: 1176 });
+    expect(fitWithin(3024, 4032)).toEqual({ w: 1176, h: 1568 });
+    expect(fitWithin(800, 600)).toEqual({ w: 800, h: 600 });
   });
 });

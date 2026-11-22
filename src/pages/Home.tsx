@@ -44,6 +44,9 @@ export default function Home() {
             Create
           </button>
         </div>
+        <Link to="/create" className="mt-2 inline-block text-sm text-charcoal-700/80 underline">
+          📷 Or start from a photo of something you like
+        </Link>
         {!aiAvailable(settings) && (
           <p className="mt-3 text-xs text-charcoal-700/70">
             No AI provider connected — Woodly will use its built-in templates. <Link to="/settings" className="underline">Connect an AI provider</Link> to design anything.
