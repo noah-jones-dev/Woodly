@@ -6,6 +6,31 @@ Woodly is a cross-platform desktop app (Tauri 2 + React + TypeScript) that turns
 
 ## Running it
 
+### Windows quick start (PowerShell helper)
+
+```powershell
+git clone https://github.com/noah-jones-dev/Woodly.git
+cd Woodly
+.\woodly.cmd setup -InstallMissing   # checks/installs Git, Node.js, Rust, C++ build tools, WebView2 + npm packages
+.\woodly.cmd start                   # get latest code + install updates, then launch the desktop app
+```
+
+| Command | What it does |
+|---|---|
+| `setup [-InstallMissing]` | Checks prerequisites (optionally installs them with winget) and installs npm packages. |
+| `update [-Force]` | `git pull --ff-only` on the current branch, then reinstalls npm packages / fetches Rust crates only if their lockfiles changed. Refuses if you have uncommitted changes unless `-Force`. |
+| `run` | Desktop app in dev mode (hot reload). |
+| `start` | `update`, then `run`. |
+| `web` | Browser-only dev server at http://localhost:1420 (no Rust needed). |
+| `build` | Release installer in `src-tauri\target\release\bundle`. |
+| `test` | Type check, TypeScript tests and Rust tests. |
+| `status` | Branch, commits waiting to be pulled, tool versions. |
+| `clean [-Force]` | Deletes `node_modules`, `dist` and Rust build output. |
+
+`woodly.cmd` runs `woodly.ps1` with `-ExecutionPolicy Bypass` for that one process, so it works even when Windows blocks unsigned scripts. If your policy allows local scripts you can call `.\woodly.ps1 <command>` directly.
+
+### Manual commands
+
 ```bash
 npm install
 npm run dev          # browser-only dev mode at http://localhost:1420 (no keychain, no SQLite)
